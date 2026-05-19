@@ -1,4 +1,4 @@
-# Opal Kelly Experiment
+c# Opal Kelly Experiment
 
 This markdown logs down my learning curve for the board of opal kelly and also evetually how to do the chip measurement after.
 
@@ -223,5 +223,280 @@ Updating verilog now...
 Okay, it is fixed now.
 
 
+## PyQt6 GUI
+
+**Date: 12-13 May 2026**
+
+I then explored the possibility of having something similar to fonrtpanel's own profile interpretation.
+
+Then I found the GUI package PyQt6 where everything can be configured as widgets and stacked in the window.
+
+After a whole day of digging into this package, I now managed to recreate the firt FrontPanel SDK example.
+
+This example can be found [here](https://docs.opalkelly.com/fpsdk/samples-and-tools/sample-first/).
+
+But it seems that it has been taken down yesterday by OpalKelly.
+
+To demonstrate, it looks something like this:
+
+![Original First demo of FrontPanel](./img/Original_FrontPanel_design_of_the_first_example_looks_neat.png)
+
+Where it has 8 buttons on the top, each would control a single LED separately.
+
+Then followed by 4 LED display which is connected to a fixed value (in this case 0000).
+
+Then it takes 2 16-bit numbers to do a simple addition and return the final sum.
+
+All of these can be replicated using PyQt6 and opal kelly python package.
+
+And it looks like this:
+
+![Purely implemented with PyQt6 to reimplement First Demo of FrontPanel](./img/Purely_PYQT6_based_GUI_control_of_FPGA_of_the_first_FrontPanelSDK_example.png)
+
+Probably the next step for Opal Kelly board experiment should be the inclusion of triggerIn/Out and PipeIn/Out.
+
+I will try to design a very simple design to verify this.
+
+
+## TriggerIn/Out and PipeIn/Out
+
+**Date: 13 May 2026 ~**
+
+Okay... it seems that opal kelly has dropped the new FrontPanel 6.0 and it has made changes to its python script about how it works.
+
+Now I am reading its migration guide...
+
+The biggest change so far is that it replaces all the wire trigger pipe and register calls.
+
+These will be different with the code below:
+
+```python
+
+
+## Wires call are different now
+
+# FP5:
+   xem.SetWireInValue(0x00, value, mask)
+   xem.UpdateWireIns()
+   xem.UpdateWireOuts()
+   out = xem.GetWireOutValue(0x20)
+
+   # FP6:
+   classic_data_port.SetWireInValue(0x00, value, mask)
+   classic_data_port.UpdateWireIns()
+   classic_data_port.UpdateWireOuts()
+   out = classic_data_port.GetWireOutValue(0x20)
+
+
+## Triggers are different
+# FP5:
+   xem.ActivateTriggerIn(0x40, 0)
+   xem.UpdateTriggerOuts()
+   if xem.IsTriggered(0x60, 1):
+       ...
+
+   # FP6:
+   classic_data_port.ActivateTriggerIn(0x40, 0)
+   classic_data_port.UpdateTriggerOuts()
+   if classic_data_port.IsTriggered(0x60, 1):
+
+
+## Pipes
+
+ # FP5:
+   xem.WriteToPipeIn(0x80, data)
+   xem.ReadFromPipeOut(0xA0, data)
+   xem.WriteToBlockPipeIn(0x80, blockSize, data)
+   xem.ReadFromBlockPipeOut(0xA0, blockSize, data)
+
+   # FP6:
+   classic_data_port.WriteToPipeIn(0x80, data)
+   classic_data_port.ReadFromPipeOut(0xA0, data)
+   classic_data_port.WriteToBlockPipeIn(0x80, blockSize, data)
+   classic_data_port.ReadFromBlockPipeOut(0xA0, blockSize, data)
+
+
+## Registers
+
+# FP5:
+   value = xem.ReadRegister(addr)
+   xem.WriteRegister(addr, data)
+
+   # FP6:
+   value = classic_data_port.ReadRegister(addr)
+   classic_data_port.WriteRegister(addr, data)
+
+
+## Reset FPGA
+
+# FP5:
+   xem.ResetFPGA()
+
+   # FP6:
+   classic_data_port.ResetFPGA()
+```
+
+I will have to stay with classic API for now...
+
+But it would also mean that I probably do not have any where to refer to for API information.
+
+
+## Chip3 overall Schematics
+
+I will now organise what we have put on Chip3 so that we can design the test with Opal Kelly.
+
+The following things will be included for at least my side of the chip:
++ Schematics
++ Chip pin order/name
++ Breakout on the PCB board <--> FPGA pin out
+
+
+What I have put on the chip is basically a PLL configurator and PLL.
+
+
+Pin out:
+
+```
+
+                  SDO  PLL_NMSX_SEL    <Corner>
+                                        
+                                        TCKO
+                                        GNDK
+                                        PLL_VCC18A
+                                        PLL_VCC18D
+                                        PLL_GND18A
+                                        PLL_GND18D
+                                        VCCK
+                                        PLL_PDN
+                                        FRANGE
+                                        PLL_TEST
+
+SDI PLL_NMSX_TCK    SE   PLL_FREF_TCKI <Corner>
+```
+
+PLL_config's verilog is very simple 
+
+```
+module PLL_config (
+
+    input cfg_clk, // slow independent clock, I am expecting it to run at 10 MHz (100 ns)
+    input PLL_NMSX_SEL, //SEL signal to mux to choose between default N/M or self customised N/M
+    input SDI, // shift data in
+    input SE, // shift enable
+    input rst_n, // reset signal
+
+    output SDO, // shift data out
+    output [5:0] NSX, // final NSX output
+    output [5:0] MSX  // final MSX output
+    
+);
+
+
+reg [5:0] NS_SREG;
+reg [5:0] MS_SREG;
+
+always @(posedge cfg_clk or negedge rst_n)
+begin
+    if (!rst_n)
+    begin 
+        {NS_SREG, MS_SREG} <= 12'd0;    
+    end
+    else 
+    begin 
+        if(SE)
+        begin 
+            {NS_SREG, MS_SREG} <= {NS_SREG[4:0], MS_SREG, SDI};
+        end
+    end
+
+end
+
+assign SDO = NS_SREG[5];
+
+assign {NSX, MSX} = PLL_NMSX_SEL? {NS_SREG, MS_SREG}: 12'b001111_000001; // this is either customised N/M or 15/1
+```
+
+
+
+**19 May 2026**
+
+From the PCB board schematics Steve left me, I found the Pin-out to the chip.
+
+
+```txt
+----------- OUTPUT FROM FPGA --> INPUT TO CHIP -----------
+B34_L21P -->  LVDS_ser_data_ctrl
+B34_L19P -->  clk_LVDS
+B34_L23P -->  ctrlB
+B34_L15P -->  clk_config
+B34_L13P -->  data0
+B34_L11P -->  samphold
+B34_L18P -->  NMSX_TCK
+B34_L22P -->  SDI
+B34_L6P  -->  PLL_test
+B34_L5P  -->  SE
+B34_L5N  -->  PLL_PDN
+B34_L8N  -->  PLL_FREF_TCK
+B13_L5N  -->  FRANGE
+B13_L3N  -->  NMSX_SEL
+
+----------- INPUT FROM FPGA --> OUTPUT TO CHIP -----------
+B13_L16P <--  TCKO
+B13_L1N  <--  SDO
+B35_L19P <--  LVDS_P
+B35_L19N <--  LVDS_N
+```
+
+
+And also this is what I designed for the counter 300M logic:
+
+```verilog
+`timescale 1ns/1ps
+module CNT_300M (
+    input clk_300m, 
+    input rst_n,
+    input [1:0] LVDS_SEL,
+
+    output reg D_2_LVDS
+
+    
+);
+
+
+reg [1:0] cnter;
+
+always @(posedge clk_300m or negedge rst_n) begin : proc_cnter
+    if(~rst_n) begin
+        cnter <= 0;
+    end else begin
+        cnter <= cnter +1;
+    end
+end
+
+always @(LVDS_SEL, cnter, clk_300m)
+begin
+    case (LVDS_SEL)
+    2'b00: D_2_LVDS = clk_300m;
+    2'b01: D_2_LVDS = cnter[0];
+    2'b10: D_2_LVDS = cnter[1];
+    2'b11: D_2_LVDS = cnter[0]||cnter[1];
+        default : D_2_LVDS = 0;
+    endcase
+end
+
+
+endmodule
+```
+
+Steve's Config scan chain looks something like:
+
+```txt
+
+on the pump of clk_LVDS, flops are chained up with the following:
+
+data_LVDS --> ctrlA --> EN --> RS --> rst_n --> LVDS_set<1> --> LVDS_set<0> --> rst_n_pll
+```
+
+I should make a top level schematics based on my understanding.
 
 
