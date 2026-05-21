@@ -425,26 +425,26 @@ From the PCB board schematics Steve left me, I found the Pin-out to the chip.
 
 ```txt
 ----------- OUTPUT FROM FPGA --> INPUT TO CHIP -----------
-B34_L21P -->  LVDS_ser_data_ctrl
-B34_L19P -->  clk_LVDS
-B34_L23P -->  ctrlB
-B34_L15P -->  clk_config
-B34_L13P -->  data0
-B34_L11P -->  samphold
-B34_L18P -->  NMSX_TCK
-B34_L22P -->  SDI
-B34_L6P  -->  PLL_test
-B34_L5P  -->  SE
-B34_L5N  -->  PLL_PDN
-B34_L8N  -->  PLL_FREF_TCK
-B13_L5N  -->  FRANGE
-B13_L3N  -->  NMSX_SEL
+B34_L21P -->  LVDS_ser_data_ctrl ====>      V9 
+B34_L19P -->  clk_LVDS           ====>      V7  
+B34_L23P -->  ctrlB              ====>      Y8
+B34_L15P -->  clk_config         ====>      W6  (SC)
+B34_L13P -->  data0              ====>      R4  (SC)
+B34_L11P -->  samphold           ====>      Y4  (SC)
+B34_L18P -->  NMSX_TCK           ====>      Y6 
+B34_L22P -->  SDI                ====>      AA8 
+B34_L6P  -->  PLL_test           ====>      U3 
+B34_L5P  -->  SE                 ====>      W1 
+B34_L5N  -->  PLL_PDN            ====>      Y1 
+B34_L8N  -->  PLL_FREF_TCK       ====>      AB2 
+B13_L5N  -->  FRANGE             ====>      AA14 
+B13_L3N  -->  NMSX_SEL           ====>      AB13 
 
 ----------- INPUT FROM FPGA --> OUTPUT TO CHIP -----------
-B13_L16P <--  TCKO
-B13_L1N  <--  SDO
-B35_L19P <--  LVDS_P
-B35_L19N <--  LVDS_N
+B13_L16P <--  TCKO              ====>      W15 
+B13_L1N  <--  SDO               ====>      AA16 
+B35_L19P <--  LVDS_P            ====>      N4 
+B35_L19N <--  LVDS_N            ====>      N3 
 ```
 
 
@@ -498,5 +498,76 @@ data_LVDS --> ctrlA --> EN --> RS --> rst_n --> LVDS_set<1> --> LVDS_set<0> --> 
 ```
 
 I should make a top level schematics based on my understanding.
+
+
+## 20 May 2026
+
+Here are the complete pin out for chip3:
+
+```
+<CornerTL>    VCCA   VCCD   OutP  OutN   GNDA   GNDD   BG   VCCK   GNDO   VCC3O   SDO  PLL_NMSX_SEL  <CornerTR>
+data_LVDS                                                                                               TCKO
+clk_LVDS                                                                                                VCCK
+VCCK                                                                                                    
+GNDK                                                                                                 PLL_VCC18A 
+ctrlB                                                                                                PLL_VCC18D
+VCC3O                                                                                                PLL_GND18A
+GNDO                                                                                                 PLL_GND18D   
+extres                                                                                                
+VCCK                                                                                                 VCCK
+clk_LVDS                                                                                             PLL_PDN                                                   
+GNDK                                                                                                 FRANGE
+srd                                                                                                  PLL_TEST
+<CornerLL>    SH  Pw_out centre_pow lpowen LPF GNDK centre vddpow SDI PLL_NMSX_TCK SE PLL_FREF_TCKI <CornerLR>
+```
+
+I also also now ploted out the schematic for the testable of our chip3.
+
+![]()
+
+I will now start looking at the opal kelly board design, and try to at least make the scan chain work.
+
+
+## 21 May 2026
+
+From the PCB prints and schematics, it looks that the power and ground has been sorted by the board.
+
+So I do not have to consider about that but simply how to drive and observe the actual signal.
+
+To start with, I would like to simply just test the scan chain.
+
+I have now finished the hardware design, with the following address information added for the hardware:
+
+```text
+
+############## WireIn endpoint 0x00 ###############
+
+[11:0] -->  PARA_FEED
+[12]   -->  PARAIN_EN
+[13]   -->  OK_SCAN_IN
+[14]   -->  rstn_ok
+[15]   -->  PLL_PDN
+[16]   -->  PLL_TEST
+[17]   -->  FRANGE
+[18]   -->  PLL_NMSX_SEL
+[19]   -->  LVDS_ser_data_ctrl
+[20]   -->  ctrlB
+
+
+############## WireOut endpoint 0x20 ###############
+
+OK_LED_WIREOUT_EP  -->  [11:0]
+SDO_from_chip      -->  [12]
+OK_SCAN_OUT        -->  [13]
+
+
+############## TriggerIn endpoint 0x40 ###############
+# @ FPGA divided clock of 20MHZ
+
+[0]   -->  OK_SCAN_ENABLE
+[1]   -->  SE
+```
+
+I will now proceed to develop a simple python script to test the hardware implementation first.
 
 
