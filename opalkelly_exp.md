@@ -1,4 +1,4 @@
-c# Opal Kelly Experiment
+# Opal Kelly Experiment
 
 This markdown logs down my learning curve for the board of opal kelly and also evetually how to do the chip measurement after.
 
