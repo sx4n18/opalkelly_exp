@@ -523,7 +523,7 @@ srd                                                                             
 
 I also also now ploted out the schematic for the testable of our chip3.
 
-![]()
+![The schematics of what we have implemented on Chip3](./img/Chip3_overall_schematics_to_be_tested.png)
 
 I will now start looking at the opal kelly board design, and try to at least make the scan chain work.
 
@@ -567,6 +567,9 @@ OK_SCAN_OUT        -->  [13]
 [0]   -->  OK_SCAN_ENABLE
 [1]   -->  SE
 ```
+The schematics for the developed hardware on OpalKelly for the first round test can be found below:
+
+![First scan chain test schematics developed on the opal kelly board](./img/First_opal_kelly_scan_chain_test_schematics.png)
 
 I will now proceed to develop a simple python script to test the hardware implementation first.
 
