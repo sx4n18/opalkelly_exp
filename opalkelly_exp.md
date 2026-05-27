@@ -574,3 +574,70 @@ The schematics for the developed hardware on OpalKelly for the first round test 
 I will now proceed to develop a simple python script to test the hardware implementation first.
 
 
+## 22 May 2026
+
+I implemented a simple script to test the implemented circuit on the opal kelly board, and built a quick GUI interface based on it.
+
+But it appears that the "set scan in high" button and "scan chain shift" did not work properly.
+
+
+### Symptoms
+
+By default all the LED will be lit and reset works fine.
+
+when scan in set high is pressed after reset, it will lit up the last 3 LEDs and when de-asserted, the last 2 LEDs will be lit.
+
+Scan chain shift does not work at all.
+
+### Diagnose
+
+I decided to build the text box to display what is the actual WireIn values.
+
+Because all 10 signals were twisted into the same 32-bit word, it can be easily mistaken.
+
+Then I realised that in the set_scan_in method, I set the wrong wire in value:
+
+when scan_in needs to be set 1, I did:
+
+```python
+ dev.SetWireInValue(0x00, 0x1FE00)  # [11:0] = 00, [15:12] = 1110 = E, [20:16] = 11111 = 1F
+```
+
+which produces 4-bit less than needed value, which means Para_feed was set "0xE00", and parain_en = 1. This disabled the scan functionality for RTL on the FPGA.
+
+Now it is fixed as below:
+
+```python
+ def set_scan_in(self):
+        if self.scan_in_button.isChecked():
+            ## only change the ok_scan_in bit to 1, keep other bits unchanged
+
+            dev.SetWireInValue(0x00, 0x1FE000)  # [11:0] = 000, [15:12] = 1110 = E, [20:16] = 11111 = 1F
+        else:
+            ## only change the ok_scan_in bit to 0, keep other bits unchanged
+
+            dev.SetWireInValue(0x00, 0x1FC000)  # [11:0] = 000, [15:12] = 1100 = C, [20:16] = 11111 = 1F
+        dev.UpdateWireIns()
+```
+
+Now the behaviour is correct:
+
+![Updated scan chain test for opal kelly board](./img/Fixed_scan_shift_behaviour_for_designed_RTL_on_FPGA.png)
+
+This also inspired me to probably implement individual buttons for needed WireIn instead.
+
+
+## 26 May 2026
+
+Long weekend, also high heat....
+
+Will now add the buttons and a set box to set up the wire in values
+
+Okay, now I have added textboxes and check boxes to programme the WireIn values.
+
+But the update WireIn button needs to be clicked before these values are sent in.
+
+Also I realised that the MSB LED has been placed on the right hand most and LSB has been placed on the left hand most, which is counter intuitive.
+
+I have updated the LED arrangement to make it more readable as well.
+
