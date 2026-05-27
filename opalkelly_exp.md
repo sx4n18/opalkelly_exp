@@ -641,3 +641,50 @@ Also I realised that the MSB LED has been placed on the right hand most and LSB 
 
 I have updated the LED arrangement to make it more readable as well.
 
+
+## 27 May 2026
+
+Now I want to do the proper testing in the lab, but the problem is that I could only carry my mac into the lab.
+
+And FrontPanel has released their 6.0 version, which caused some changes on the python API.
+
+So I decided to make a new branch and update all my code in this new branch in 6.0 feature.
+
+Migration complete.
+
+Now I can start the test by plugging FPGA and the PCB together.
+
+And observe the chip socket through oscilloscope. 
+
+Ok, I think I have just made the first step for chip measurement.
+
+Thanks to the helpful test PCB design from Steve, I could easily observe the signal coming out of our FPGA pin.
+
+![The side by side of the PCB schematics and my designed GUI for testing](./img/My_designed_GUI_togehter_with_PCB_signal_monitor_connector.png)
+
+As the PCB schematic suggests, punch-hole of 6,9,16 should be driven by the same 20 MHz clock.
+
+Combined with the actual PCB layout displayed below:
+
+![the actual connector layout on the PCB](./img/Connector_plug_pin_out_on_the_PCB_actual_layout.png)
+
+We could do preliminary test for it.
+
+So I tested pin 16 of the connector, aka clk_LVDS.
+
+![The probe clutching on to the punch hole 16 which connects to clk_LVDS](./img/probe_of_the_oscilloscope_connected_to_pin_hole_16_of_J1.jpeg)
+
+And correspondingly, 20MHz clock was observed from the scope
+
+![What was measured and displayed on the oscilloscope for this measurement](./img/20MHz_observed_from_punchhole_16_on_J1_connector_plug.jpeg)
+
+From the GUI I have set up for this test, it can be seen that FRANGE/NMSX_SEL has been set to 1, therefore, 3.3 V should be observed on punch-hole 3/4.
+
+![scope probe hook has been connected to punch hole of number 4, which corresponds to NMSX_SEL](./img/probe_of_the_scope_has_been_moved_to_punchhole_number_4_which_corresponds_to_NMSX_SEL.jpeg)
+
+And I am very lucky that 3.3 V has been observed from the scope
+
+![3.3V was observed from the oscilloscope from the setting of the pin NMSX_SEL](./img/Presset_T_is_3.3V_which_mathces_the_output_of_FPGA_NMSX_SEL.jpeg)
+
+This has been verified to be true when I turned it off on the GUI, then 0V was observed.
+
