@@ -515,7 +515,7 @@ VCC3O                                                                           
 GNDO                                                                                                 PLL_GND18D   
 extres                                                                                                
 VCCK                                                                                                 VCCK
-clk_LVDS                                                                                             PLL_PDN                                                   
+clk_LVDS                                                                                             PLL_PDN                
 GNDK                                                                                                 FRANGE
 srd                                                                                                  PLL_TEST
 <CornerLL>    SH  Pw_out centre_pow lpowen LPF GNDK centre vddpow SDI PLL_NMSX_TCK SE PLL_FREF_TCKI <CornerLR>
@@ -687,4 +687,33 @@ And I am very lucky that 3.3 V has been observed from the scope
 ![3.3V was observed from the oscilloscope from the setting of the pin NMSX_SEL](./img/Presset_T_is_3.3V_which_mathces_the_output_of_FPGA_NMSX_SEL.jpeg)
 
 This has been verified to be true when I turned it off on the GUI, then 0V was observed.
+
+
+## 28 May 2026
+
+Because there has been no record for the actual die-chip pin planning. 
+
+I will have to do it myselt to check the intended chip-orientation.
+
+Then after checking closely the actual chip. I see the 44 pins and what they are.
+
+I have sort out the actual die and bonding wire planning.
+
+![The observed wire bonding of the chip and die](./img/Acutal_die_bonding_wire_chip_pin_planning.png)
+
+If we take the top side as the top side and according to the socket, the middle pin as the pin 1 and increment by counter clockwise. 
+
+After some layout and shcematic checking with the pin number comparison, I found the correct chip orientation on the socket.
+
+It appears that the chip should be rotated clockwise for 90 degrees so that the top left corner "S" should be near the input power connector.
+
+The orientation can be illustrated with the depiction below:
+
+![Chip orientation illustration figure](./img/chip_orientation_on_TestingPCB_illustration.png)
+
+
+
+
+
+
 
