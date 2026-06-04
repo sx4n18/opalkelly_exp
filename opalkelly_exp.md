@@ -712,8 +712,350 @@ The orientation can be illustrated with the depiction below:
 ![Chip orientation illustration figure](./img/chip_orientation_on_TestingPCB_illustration.png)
 
 
+## 2 June 2026
+
+I guess today's task is to figure out the power and ground supply on the PCB board and see if it is safe to put the chip inside.
+
+Will start by observing the cable I have here.
+
+I see that the on the schematics, for example 1V8C_a and 1V8C_b supply, the Voltage from the voltage regulator VOUT should be connected to resistor R24 before it was fed to the monitor punch hole and system, but now it seems there is no resistor to connect it.
+
+But also on the schematics, it says solderswipe, I think we need to connect it using solder.
+
+Okay, I just made one simple solder at R23, and now we can actually observe 3.3 V at the punch hole now, it kinda proves my thought...
+
+Since Steve is coming tomorrow, I will leave that to him.
+
+## 3 June 2026
+
+We have disconnected the Ferrite bead necessary to power the BANK 35 of XEM7310 with 2.5V.
+
+All the necessary solder swipe has been connected, so that the power and ground can be supplied to the chip.
+
+The orientation for the chip to the socket has also been confirmed.
+
+But as we try to put the chip into the socket, we found out that the chip will not fit the way we planned.
+
+After some digging, it has been found out that the JLCC44 package for the chip we had on our hand is having a different mechanical definition with the socket.
+
+From the [document](https://europractice-ic.com/wp-content/uploads/2019/06/CD_JLCC44.pdf), it can be seen that from its pin 1 and go counter-clockwise, the first corner should be "less cut out".
+
+![Europractice JLCC44 package dimension and geometry](./img/JLCC44_from_europractice_packaging_which_gives_triangular_corner_at_the_first_corner_after_pin1.png)
+
+But the socket we have is defined in a way where this triangular corner appears at the 3rd corner after pin 1
+
+![Actual socket designed for PLCC44 gives different geometry definition](./img/Geometry_definition_of_thePLCC44_socket_from_AMP_gives_diff_location_for_triangular_corner.png)
+
+This inconsistency has caused the fact that our chip cannot fit properly.
+
+As a solution, the corner for the socket has been cut out so that our chip can properly fit in.
+
+Because we could not rotate the chip around when pins on the PCB have been defined and routed.
+
+Now we shall proceed the test, and it appears that the LED can be lit when powered on, which means it is not short.
+
+When I hook up the board, it appears that D2 is always lit.
+
+![The testing PCB board with D2 LED is always lit](./img/opalkellyboard_openup_with_LED_D2_always_lit_on.jpeg)
+
+And after we check the testing PCB schematic, we found out that it indicates TCKO is "on".
+
+After hooking up to the oscilloscope, we observed a nice clean 20MHz clock.
+
+![In test mode, we have the TCKO = TCKI = 20 MHZ](./img/20MHz_clock_observed_from_TCKO_when_bootup_which_shows_PLL_is_working.jpeg)
+
+And under the default boot up setting, PLL will be configured as in the test mode.
+
+So we would have:
+
+```text
+
+INPUT:
+
+TEST = 1
+TCKI = 5 - 20 MHz
+PLL_NMSX_sel = 'X'
+FREF = 'X'
+FRANGE = 'X'
+PLL_PDN = 'X'
 
 
 
+OUTPUT:
 
+CKOUT = FREF
+TCKO = (16/16)*TCKI
+```
+
+In the functional mode, we should have:
+
+```text
+INPUT:
+
+TEST = 0
+TCKI = 'X'
+PLL_NMSX_sel = '1'
+FREF = 5- 20 MHZ
+FRANGE = '1'
+NS/MS = 16
+PLL_PDN = '1'
+
+OUTPUT:
+
+CKOUT = (N/M)*FREF
+TCKO = CKOUT/16
+```
+
+Preliminary testing with very limited configuration so far proves 2 things:
+
+PLL is working!
+My side of scan chain works!
+Steve's side scan chain works!
+
+Now I will need to write a new testing OpalKelly firmware to sort out my side of scan chain and also Steve's side of scan chain.
+
+We now had the digital logic analyser hooked up to the test PCB, and we have the following pin-out:
+
+```
+    Logic analyser                      Chip pin name
+        D0                                   clk_LVDS 
+        D1                                   TCKO 
+        D2                                   SDO 
+        D3                                   FRANGE 
+        D4                                   NMSX_SEL 
+        D5                                   PLL_PDN
+        D6                                   PLL_FREF_TCK 
+        D7                                   PLL_TEST 
+        D8                                   SE 
+        D9                                   NMSX_TCK 
+        D10                                  SDI 
+        D11                                  data0
+        D12                                  samhold 
+        D13                                  ctrlB 
+        D14                                  clk_config 
+        D15                                  LVDS_ser_data_ctrl
+```
+
+## 4 Jun 2026
+
+**Boot-Up Test**
+
+To organise the observations from yesterday’s testing session, I performed a more thorough investigation and documented the expected behaviour alongside the measured results.
+
+### Initial power-up condition
+
+At boot-up, the following default values were observed:
+
+```
+ok_scan_in = 0
+rstn_ok = 1
+pll_pdn = 1
+pll_test = 1
+frange = 1
+pll_nmsx_sel = 1
+lvds_ser_data_ctrl = 1
+ctrlB = 1
+```
+
+### Expected PLL behaviour
+
+Since pll_test = 1, the PLL should operate in test mode, meaning:
+
+```
+TCKO = TCKI = FREF = 20 MHZ.
+```
+
+### Expected Scan Chain State
+
+Since lvds_ser_data_ctrl = 1, all flops in Steve’s scan chain design should be loaded with logic 1:
+
+
+```
+data_LVDS --> ctrlA --> EN --> RS --> rst_n --> LVDS_set<1> --> LVDS_set<0> --> rst_n_pll
+```
+
+So we would have ctrlA = 1 and also ctrlB = 1, which should produce the following results input to LVDS:
+
+```
+D_LVDS = (ctrlA+cnt_mux)ctrlB = 1
+```
+As a result, the expected LVDS output is:
++ P = 1 
++ N = 0
+
+This matches the observed behaviour:
+
+* P (yellow trace) = 1
+* N (green trace) = 0
+
+![Results from logic analyzer after boot up](./img/logic_analyzer_results_of_all_12_probes_after_start_up.jpeg)
+
+### Logic Analyser Measurement
+
+From the logic analyser, the following signals were captured::
+
+```
+clk_LVDS = PLL_FREF_TCK = NMSX_TCK = 20MHz
+TCKO = 20 MHz
+SDO = 0
+FRANGE = 1
+NMSX_SEL = 1
+PLL_PDN = 1
+PLL_TEST = 1
+SE = 0
+SDI = 1
+ctrlB = 1
+LVDS_ser_data_ctrl = 1
+```
+These measurements are consistent with the expected boot-up configuration.
+
+### LVDS voltage levels
+
+But the voltage we observed is not what I think it should be, like **1.375** and **1.025**. What we observed is about 3.1 V and 0 V.
+
+#### Expected LVDS voltage levels
+
+The expected LVDS common-mode voltages would be approximately:
+```
+P ≈ 1.375 V
+N ≈ 1.025 V
+```
+corresponding to a differential voltage of approximately:
+
+```
+VP - VN ≈ 350 mV
+```
+#### Measured voltage levels
+
+Instead, the measured voltages were approximately:
+
+```
+P ≈ 3.1 V
+N ≈ 0 V
+```
+#### Functional verification
+
+To verify that the LVDS driver was responding correctly, ctrlB was toggled from 1 to 0.
+
+The outputs flipped polarity as expected:
+
+![The P and N of the output from LVDS would actually flip when ctrlB is changed](./img/The_voltage_levels_are_flipped_after_CTRLB_value_is_flipped_shows_LVDS_works.jpeg)
+
+```
+ctrlB = 1  →  P = 1, N = 0
+ctrlB = 0  →  P = 0, N = 1
+```
+This suggests that the LVDS logic and driver are functioning correctly.
+
+#### Possible cause of the Voltage level❓❓❓❓❓❓
+
+The voltage levels may appear incorrect because the LVDS output is not terminated.
+
+According to the LVDS standard, a termination resistor should be placed between the differential pair:
+
+$$R_{TERM}=100\Omega$$
+
+This resistor allows the LVDS driver current (typically 3.5 mA) to generate the expected differential voltage:
+
+$$V=IR=3.5\,mA\times100\Omega=350\,mV$$
+
+However, during measurement the outputs were probed directly using an oscilloscope. Each probe presents a very high input impedance (approximately 10 MΩ), effectively leaving the LVDS outputs unterminated.
+
+As a result, the observed voltages may not represent the true operating levels of the LVDS interface.
+
+**Change the PLL test case**
+
+Next, I attempted to switch the PLL from test mode into functional mode.
+
+### Procedure
+
+1. Reset the PLL:
+
+```
+pll_pdn = 0
+pll_test = 0
+```
+
+As expected, TCKO stopped toggling.
+
+2. Re-enable the PLL and deselect pll_nmsx_sel to use the default N/M divider values.
+
+The default PLL configuration should generate a 300 MHz clock:
+
+$$f_{PLL}=20\times\frac{15}{1}=300\,MHz$$
+
+Since TCKO outputs CKOUT/16, the expected output frequency is:
+
+$$f_{TCKO}=\frac{300}{16}=18.75\,MHz$$
+
+The resulting configuration was:
+```
+ok_scan_in = 1
+rstn_ok = 1
+pll_pdn = 1
+pll_test = 1
+frange = 1
+pll_nmsx_sel = 1
+lvds_ser_data_ctrl = 1
+ctrlB = 1
+```
+### Results
+
+The measured output matched expectations:
+
+![TCKO switched to 18.75 Mhz when we have the PLL switched to default N/M setting](./img/D1_Probe_connected_to_TCKO_with_PLL_set_at_functional_mode_and_default_NM_values.jpeg)
+
+```
+TCKO = 18.75 MHz
+```
+
+This confirms that the PLL can lock and operate using the default divider values.
+
+Unfortunately, due to limitations in the current firmware (specifically, the inability to directly control Steve’s scan chain), further PLL testing could not be performed at this stage.
+
+TO BE CONTINUED!!!
+
+**Scan chain test**
+
+The next objective was to verify the operation of the scan chain.
+
+### Test procedure
+
+1. Disable the PLL:
+
+```
+pll_pdn = 0
+```
+2. Drive a logic 1 onto SDI via the ok_scan_out signal.
+3. Perform repeated scan-shift operations.
+
+### Results
+
+After 11 scan shifts, the LED connected to SDO illuminated.
+
+![scan chain on my side has been successfully checked to shift in logic 1](./img/D3_LED_turned_on_at_SDO_after_values_were_shifted_in.jpeg)
+
+This confirms that the scan chain is capable of shifting data from SDI to SDO.
+
+Although I am not yet certain whether the expected chain length should be exactly 11 bits, the experiment demonstrates that the scan chain is operational.
+
+Further verification will be carried out once updated firmware becomes available.
+
+### Summary
+
+Confirmed
+
+* Boot-up configuration matches design expectations.
+* LVDS output logic responds correctly to ctrlB.
+* PLL test mode produces a 20 MHz TCKO.
+* PLL functional mode produces an 18.75 MHz TCKO.
+* Scan chain successfully shifts data from SDI to SDO.
+
+Outstanding Questions
+
+* Why are the observed LVDS voltage levels significantly different from expected LVDS levels?
+    * Most likely due to lack of differential termination.
+    * Requires testing with a 100 Ω termination resistor across P and N.
+* Exact scan chain length remains to be verified.
+* Additional PLL testing awaits updated firmware support.
 
