@@ -1059,3 +1059,14 @@ Outstanding Questions
 * Exact scan chain length remains to be verified.
 * Additional PLL testing awaits updated firmware support.
 
+
+## 8 Jun 2026
+
+I will proceed the design for new testing firmware, the following features should be included.
+
++ controllable scan chain for clk_LVDS and LVDS_ser_data_ctrl
++ Self customised N/M value on my scan chain
+
+I think I will have to set LVDS_ser_data_ctrl as WireIn but clk_LVDS as TriggerIn so it can shift by command.
+
+
