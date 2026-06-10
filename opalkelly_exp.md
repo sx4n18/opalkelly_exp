@@ -1069,4 +1069,164 @@ I will proceed the design for new testing firmware, the following features shoul
 
 I think I will have to set LVDS_ser_data_ctrl as WireIn but clk_LVDS as TriggerIn so it can shift by command.
 
+I have added an extra scan chain to pick up SDO signals to shift in.
+
+Also, I added IBUFDS to pick up LVDS output from the chip for the lvds termination.
+
+Another modification I made was to change the clk_LVDS into trigger In
+
+![Added extra scan chain to view SDO](./img/Additional_scan_chain_to_pick_up_SDO_signal_coming_from_chip3.png)
+
+And based on the newly designed firmware, I have also designed the GUI to fine tune and modulate the PLL and LVDS output options
+
+![Newly designed GUI to configure Steve's scan chain and my scan chain](./img/Chip_bring_up_GUI_layout_with_different_widgets.png)
+
+I have done some interesting measurements, this will be organised tomorrow.
+
+
+## 9 June 2026
+
+When I came to the lab, I found that the LVDS testing wire has been ripped off.
+
+I could not have it soldered up by myself, so I asked Kane for help.
+
+He managed to put wires back on again, but the oscilloscope is displaying strange waveforms.
+
+It looks like the signal integrity was hugely compromised after this re-attachment.
+
+And then the wire was ripped off again...
+
+![sad little chip with one of the fly wires ripped off](./img/one_of_the_2_extended_fly_wires_was_ripped_off_again.jpeg)
+
+I will have to figure out another way to test our LVDS now.
+
+Maybe by updating the firmware on opalkelly.
+
+But so far, I think I have got more or less what I wanted:
+
++ PLL has been tested to be working and configurable
++ Scan chain works on both sides
++ LVDS can flip and in the limited test I have done, it would actually fit in what we kinda expect
+
+for the rest of the test, I will wait until Steve comes back to finish the test.
+
+For now, I will figure out if there is a workaround to monitor LVDS and also organise what I have observed so far.
+
+
+### Customise N/M to the PLL with programmable clock frequency
+
+As described before, we have the PLL actually working under test mode and also functional mode with default N/M parameters (15/1).
+
+This should produce the clock frequency of 300 MHz to CKO, and on the monitor side, we should have TCKO = 18.75 MHz.
+
+But we have not tested customised clock frequency.
+
+So we set the parameters with following:
+
++ N = 24
++ M = 2
+
+This parameter setting has been verified by the scan shift out on the extended scan chain:
+
+![Verified N/M values of 24 and 2 from the newly established scan chain](./img/Scan_chain_can_actually_shift_customised_N_M_values_into_my_scan_chain_and_then_shift_out.png)
+
+This combination should produce clock frequency $20 \times \frac{24}{2} = 240 MHz$, and we should observe $240 \div 16 = 15 MHz$ at CKO.
+
+This has been observed at the oscilloscope side TCKO:
+
+![Just as expected, 15 MHz was monitored at oscilloscope](./img/15MHz_clock_moniotred_at_TCKO_from_oscilloscope.jpeg)
+
+
+Then I changed the parameters with the following:
+
++ N = 24
++ M = 6
+
+![New N and M parameters set to achieve a sub-100 MHz clock internally](./img/New_set_of_N/M_values_set_up_from_GUI_on_Python.png)
+
+This should produce the clock $20 \times \frac{24}{6} = 80 MHz$, correspondingly, TCKO should be $80 \div 16 = 5 MHz$.
+
+We have also successfully observed this at TCKO:
+
+![New clock with 5 Mhz has also been observed](./img/sub-100MHZ_clock_of_80MHz_with_TCKO_being_5MHz_was_observed.jpeg)
+
+
+### LVDS behaviour summary
+
+**DISCLAIMER: the following log is a summary of lab experimented on 8 June 2026 when both wires are still attached!**
+
+The LVDS behaviour has been monitored at the expected system clock of 300 MHz, when PLL configuration parameters were set as 15/1.
+
+We would assume the internal 2-bit counter runs at 300 Mhz.
+
+So when we change the LVDS source selection, we should be expecting different LVDS frequency.
+
+With the source selection signal *[1:0] LVDS_sel*, we have the following combo:
+
++ 00: 300 MHz clock
++ 01: bit 0 of the 2-bit counter, aka 150 MHz clock
++ 10: bit 1 of the 2-bit counter, aka 75 MHz clock
++ 11: the OR of bit 0 and bit 1, with the sequence like 01110111
+
+
+#### Case 00
+
+When LVDS_sel = 00, the output source selects the 300 MHz clock, which flips every 1.6667 ns, with period of 3.333 ns.
+
+This is what we can observe from the oscilloscope:
+
+![Waveform of LVDS PN shows thick "sausage" shape](./img/LVDS_PN_waveform_on_LVDS_SEL_setting_of_00.jpg)
+
+It can be seen from the oscilloscope that LVDS signal integrity is heavily compromised and the waveform shows "thick sausage" shape.
+
+This might be due to the connecting wire being too noisy.
+
+#### Case 01
+
+When LVDS_sel = 01, the source has been switched to 150 MHz, which flips every 3.3333 ns, with period of 6.6667 ns.
+
+Image below shows what we can observe from the oscilloscope:
+
+![This is more like it with lvds_sel = 01](./img/New_LVDS_PN_waveform_under_LVDS_SEL_setting_of_01_which_should_show_300Mbps.jpg)
+
+From the screenshot, it looks that it is actually flipping properly like it should be.
+
+Because in the current display settings, we have 2ns per division, which means the whole screen contains 20 ns' waveform.
+
+And in this whole screen, we could see there are more or less 3 cycles of wave for green curve, which gives us a period of just about 6.6667 ns.
+
+The yellow curve on the other hand looks like it does strictly follow the up down cycle, this may still be due to the testing environment.
+
+#### Case 10
+
+When LVDS_sel = 10, it should be 75 MHz, which flips every 6.6667 ns, with period of 13.3333 ns.
+
+Image is here for this setting:
+
+![images look more decent and illegible](./img/LVDS_waveform_shows_more_tolerated_switching_and_swinging_with-LVDS_SEL_eq_10_should_be150Mbps.jpg) 
+
+Again in this setting, we have 5 ns per division, which gives 50 ns for the whole screen.
+
+In the whole screen, we have about 3.6 periods, which means each period is about 13.888 ns, which is very very close to the expected value.
+
+#### Case 11
+
+When LVDS_sel = 11, it should produce 0111_0111 pattern, which is equally 75 MHz with a duty cycle of 75%.
+
+so period = 13.333 ns, 0 period = 3.3333, 1 period = 10 ns.
+
+Image is here: 
+
+![75MHz again with duty cycle of 75%](./img/LVDS_waveform_shows_slightly_unorthodox_waves_when_LVDS_SEL_eq_11_should_show_0111_0111.jpg)
+
+The period looks about right tho...
+
+But is it actually 0111? I could not tell with my eyes.
+
+
+Overall it feels positive, but there are challenges still for this testing, because I could not recreate this now with the testing setup being distracting to LVDS signals.
+
+
+
+
 
