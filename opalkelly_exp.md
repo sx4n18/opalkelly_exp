@@ -1228,5 +1228,43 @@ Overall it feels positive, but there are challenges still for this testing, beca
 
 
 
+## 24 June 2026
+
+Piotr made an interesting point of how to measure the LVDS signals we could generate.
+
+Because the output LVDS signals in the default case will generate either: 300 MHz clock, 150 MHz clock, or 75 MHz clock or 75 MHz with 75 % duty cycle.
+
+We could first use IBUFDS to convert that signal we have into single ended signal, and then do a 1/8 or 1/16 clock divided clock and transmit that out from another pin out from opalkelly.
+
+I will have to rewrite the firmware to include this logic.
+
+But also in the meantime, I have to check how much modification I need to do to the testing PCB.
+
+So I went through the schematics of the testing PCB and found that we do actually have 4 pins on the connector that were tapped out but not connected to anything.
+
+![I found some pin outs on the connector that were tapped but not connected to anything](./img/Additional_pins_that_were_not_connected_on_opal_kelly.png)
+
+
+So they were corresponding to these few points on the PCB:
+
+![These spots could be observed at the back of the testing PCB](./img/Back_side_of_testing_PCB_with_tapped_pin_but_not_connected.jpeg)
+
+So basically, we could extend the wires out through these ports.
+
+But the only thing we need to remember is these pins belong to bank 35, which now swings at 2.5V cus the of LVDS IO.
+
+
+## 25 June 2026
+
+Just asked the favour from Kane to help me do that soldering and wires, which has been done now.
+
+![Extended wires has been soldered on to the tapped out point](./img/extended_wires_soldered_on_tapping_point.jpeg)
+
+I will proceed for the next firmware development, but my dongle is missing somehow...
+
+This means I could not programme opalkelly for now...
+
+So I ordered a new one from iProc.
+
 
 
