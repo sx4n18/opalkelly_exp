@@ -1267,4 +1267,41 @@ This means I could not programme opalkelly for now...
 So I ordered a new one from iProc.
 
 
+## 29 June 2026
 
+I hooked up the wire and then configured the FPGA with the additional logic to test the output LVDS signals.
+
+![The additional testing logic inside the FPGA so that we could probe the equivalent low speed signal to test high speed](./img/Additional_logic_for_LVDS_testing.png)
+
+The included logic will basically increment the 32-bit counter and export the slow signal back out to the FPGA pin.
+
+The exported signal is the third bit of the counter, which is basically will be translated into 1/16 of the original clock.
+
+I then set up the PLL to output the 300 MHz clock.
+
+When LVDS_sel = 00, the output LVDS signal will be 300 MHz clock, technically we should be getting 1/16 of that in the output pin from FPGA.
+
+![The measurement shows that the LVDS is actually showing the same clock frequency as TCKO, which is correct](./img/300MHz_clock_directly_fed_into_LVDS_driver_which_has_been_translated_correctly.jpeg)
+
+It can be seen that the output signal (green) is actually displaying the correct frequency, which should be the same as TCKO.
+
+When LVDS_sel = 01, the output LVDS signal will be 150 MHz clock, which means the output from FPGA should be around 9.375 MHz.
+
+![The measurement actually shows the correct frequency of the LVDS signal of 9.375 MHz](./img/150MHz_clock_fed_in_LVDS_Driver_which_should_translate_to_9MHz.jpeg)
+
+When LVDS_sel = 10/11, the output LVDS signal should be 50% duty cycle of 75 MHz, or 75% duty cycle of 75 MHz. Under this testing case, they should output the same signal of 4.6875 MHz, they have been tested and monitored as the correct frequency on the oscilloscope.
+
+![Setting of LVDS_sel = 10, duty cycle of 50% 75MHz](./img/75MHz_fed_into_LVDS_which_produces_4_6875MHz.jpeg)
+
+![Setting of LVDS_sel = 10, duty cycle of 75% 75MHz](./img/LVDS_SEL_equal_11_this_should_produces_same_clock_frequency_of_4_6875MHz.jpeg)
+
+
+Conclusion: LVDS signals were captured with no problem, and can be recognised by FPGA devices.
+
+Additional test: I also tested custom clock frequency of 240 MHz, which should give us the same 15MHz as TCKO on D1.
+
+![Test successful for custom 240 MHz, which should produce same 15 MHz](./img/Custom_clock_frequency_of_240MHz_which_should_produce_15MHz.jpeg)
+
+So overall good news, all of my bits are working fine! Even including LVDS!
+
+My bits of testing can officially conclude now!
