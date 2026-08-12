@@ -1305,3 +1305,63 @@ Additional test: I also tested custom clock frequency of 240 MHz, which should g
 So overall good news, all of my bits are working fine! Even including LVDS!
 
 My bits of testing can officially conclude now!
+
+
+## 11 Aug 2026
+
+Now I am ready to start developing the testing firmware for Steve.
+
+He sent me the email with the requirements he needs.
+
+mainly it will be 3 pins to output to chip.
+
+|Signal name | opal kelly pin | FPGA pin |
+|---|---|---|
+|shift data| B34_L13P | R4|
+|shift clk| B34_L15P | W6|
+|Sample/Hold| B34_L11P | Y4|
+
+And inside the chip, there shall be a chain of shift registers of 34 bits that controls the signals of $En_{i}$ and $Mux_{i}$ and $En\_HF$ and $En\_LPF$ 
+
+so I will build a 34-bit shift registers inside the FPGA and allow Steve to tweak each bit before loading them in.
+
+Now after some revision, the firmware on FPGA has been designed and implemented, I will now proceed to python testing script development.
+
+These following information is how I structured the hardware:
+
+```text
+// ep wires assignment
+// WireIn 0x00
+//
+// [31:0]  para_in34 [31:0]
+
+// WireIn 0x01
+//
+// [1:0]  para_in34 [33:32]   
+// [2]    samp_hold
+// [3]    rstn_ok
+
+
+// WireOut 0x20
+//
+// [31:0]  SR34_out_to_ep[31:0]
+
+// WireOut 0x21
+//
+// [1:0]   SR34_out_to_ep[33:32]
+
+// TriggerIn 0x40
+//
+// [0]    shif_clk
+// [1]    SR34_SE
+// [2]    para_enable
+
+```
+
+
+## 12 Aug 2026
+
+I have now finished the python script for Steve's test, which should be very basic stuff.
+
+It will support Steve to configure 34-bit of the scan chain and offer the sample/hold button.
+
