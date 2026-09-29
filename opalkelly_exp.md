@@ -1443,4 +1443,18 @@ I will leave the process to software to finish the SPI interface and the flow sh
 8. Done
 
 
+## 29 Sep 2026
+
+Today I will proceed with the hardware design for the SPI test inteface.
+
+Now heading for the vivado.
+
+Fixed a little bug inside the clock divider, where the counter register was declared with only 4-bit when we actually need 5-bit to count up to 20. so that we could generate 5 Mhz from 200 Mhz.
+
+200 Mhz -> flip every 20 cycles --> a complete up and down consists of 40 cycles
+
+The developed firmware is now synthesised and also implemented with bitstream.
+
+This will now be integrated with the python project.
+
 
