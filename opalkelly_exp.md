@@ -1365,3 +1365,82 @@ I have now finished the python script for Steve's test, which should be very bas
 
 It will support Steve to configure 34-bit of the scan chain and offer the sample/hold button.
 
+
+------------
+
+
+# Chip 4 test with opalkelly
+
+Now that we have finished chip 3 measurement, we now will proceed to chip 4 measurement.
+
+We may not have a successful chip given the state we were at when the chip was submitted.
+
+So for my side, I have the following implementation illustrated as below:
+
+![The overall big schematic for our last chip design, my side](./img/CHIP4_floorplan_top_level_view_schematics.png)
+
+And Steve's side is illustrated in the slide he sent me.
+
+I basically need to give him the input for the digital control on his side, it is an SPI-like interface with the following inputs:
+
+```verilog
+input       spi_clk,
+input       MOSI,
+input       nglobals,
+input       nCS,
+input       nclk_set,
+input       node_SW,
+input       Latch,
+input       SH
+```
+
+After having a look at the slides, it seems that Steve's sides simply has clock enabled by different signals.
+
+```
+
+MOSI        --------------------------------
+
+spi_clk     --------------------------------
+
+nglobals    --------------------------------     range [2:0]
+
+nclk_set    --------------------------------     {nine_eight, en_adc_res, clk_doub}       
+
+nCS         --------------------------------     addr [9:0]  ==> one_hot encode ---- EN_LPF_out (enable a specific node)
+
+node_sw     ----------------------------------------------------------------------------------- specific 10-bit shadow reg
+
+Latch       --------------------------------------------------------------------------------------------- 10-bit cmt reg                              
+```
+
+where MOSI and spi_clk are shared by all the shift register lines. There are 4 lines of shift registers.
+
+1. Range [2:0]
+2. addr [9:0]
+  + 10-bit shadow reg
+  + 10-bit cmt reg
+3. {nine_eight, en_adc_res, clk_doub}
+
+And the 10-bit shadow registers are organised in the order: offset[4:0], En_offset_amp, FixRef, En_general, Offctrl, Autohold.
+
+While there is an extra bit along this line, it has been confirmed that it will be used.
+
+For the test, I shall be having the opalkelly's FPGA design as follow:
+
+![SPI interface test design with opal kelly FPGA and with Steve's side](./img/Simple_SPI_test_interface_design_opal_kelly.png)
+
+As illustrated from the diagram, we shall have shift registers built inside opalkelly FPGA to store the pre-programmed values to be sent to MOSI.
+
+I will leave the process to software to finish the SPI interface and the flow shall be as follows with an example of programming range\[2:0\]
+
+1. Set WireIn up for para_en to load in the desired range values from range_para
+2. Set WireIn up to make MOSI select the output of range_para out, we are ready to shift data in
+3. Pull down nglobals with a WireIn set.
+4. Send a TriggerIn at spi_clk
+5. Send a TriggerIn at SE0
+6. repeat step 4,5 for another 2
+7. pull up nglobals
+8. Done
+
+
+
