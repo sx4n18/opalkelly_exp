@@ -1458,3 +1458,13 @@ The developed firmware is now synthesised and also implemented with bitstream.
 This will now be integrated with the python project.
 
 
+# 30 Sep 2026
+
+I have finished the testing firmware together with the python scripts for Steve's SPI interface.
+
+Also fixed some bugs and issues.
+
+Then I was told our chip is still not back yet and expected to arrive about early October and with additional packaging that is another 3-4 weeks.
+
+This means we will not be able to test our chip till November.... dreadful.
+
