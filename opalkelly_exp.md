@@ -1458,7 +1458,7 @@ The developed firmware is now synthesised and also implemented with bitstream.
 This will now be integrated with the python project.
 
 
-# 30 Sep 2026
+## 30 Sep 2026
 
 I have finished the testing firmware together with the python scripts for Steve's SPI interface.
 
@@ -1467,4 +1467,25 @@ Also fixed some bugs and issues.
 Then I was told our chip is still not back yet and expected to arrive about early October and with additional packaging that is another 3-4 weeks.
 
 This means we will not be able to test our chip till November.... dreadful.
+
+## 1 Oct 2026
+
+We have been informed the chip will not arrive until maybe November. But I will need to first figure out how my test firmware should look like.
+
+One of the biggest part would be the LVDS decoding bit, which requires some training and sync up.
+
+So I have designed the decoding interface below for this chip testing:
+
+![The designed rough thoughts on the structure for LVDS signal de-serialisation](./img/oktesting_Chip4_LVDS_testing_circruitry.png)
+
+This has been implemented (excluding the FSM) for some quick tests.
+
+## 2 Oct 2026
+
+Updates: I have decided to merge the 2 FSMs into 1 big FSM to simplify the wiring.
+
+Still drafting the FSM where the FSM will be in charge of tap sweeping and bit slip tuning.
+
+
+
 
